@@ -1,0 +1,16 @@
+{
+    "name": "SBU ScheduleBuilder Annotations",
+    "version": "0.1",
+    "description": "View professors' difficulty and quality ratings on Schedule Builder",
+    "content_scripts": [],
+    "background": {
+        "scripts": [
+            "background.js"
+        ],
+        "persistent": false
+    },
+    "permissions": [
+        "storage"
+    ],
+    "manifest_version": 2
+}
