@@ -3,33 +3,44 @@ const cheerio = require('cheerio');
 const { MongoClient } = require('mongodb');
 
 (async () => {
-    const html = await getHTML(1);
+    const html = await getHTML();
     const professors = extractProfessors(html);
     await updateDB(professors);
 })();
 
-async function getHTML(requests = 1) {
+async function getHTML() {
     const url = 'https://www.ratemyprofessors.com/search/teachers?query=*&sid=971';
 
     const close_selector = '.CCPAModal__StyledCloseButton-sc-10x9kq-2';
     const show_more_selector = '.PaginationButton__StyledPaginationButton-txi1dr-1';
+    const num_profs_selector = '.flHcYr';
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     await page.goto(url);
+    console.log(`Navigating to ${url}...`);
 
     const close = await page.$(close_selector);
     const show_more = await page.$(show_more_selector);
 
     await close.click();
-    for (let i = 0; i < requests; i++) {
+
+    const text_with_num_profs = await page.$eval(num_profs_selector, element => element.innerText);
+    const num_profs = parseInt(text_with_num_profs.split(" ")[0]);
+    const num_show_more_clicks = Math.ceil(num_profs / 8) - 1;
+    for (let i = 0; i < num_show_more_clicks; i++) {
         await show_more.click();
+        await page.screenshot({ path: `./screenshots/screenshot_before${i}.png` });
         await page.waitForFunction((show_more) => !show_more.hasAttribute('disabled'), {}, show_more);
+        await page.waitForTimeout(Math.random() * 50);
+        console.log(`(${i} / ${num_show_more_clicks}) Clicking show more...`);
+        await page.screenshot({ path: `./screenshots/screenshot_after${i}.png` });
     }
 
     const results_selector = '.SearchResultsPage__SearchResultsWrapper-sc-1srop1v-1';
     const html = await page.$eval(results_selector, element => element.innerHTML);
     await browser.close();
+    console.log('Returing HTML data...');
     return html;
 }
 function extractProfessors(HTML) {
@@ -61,6 +72,7 @@ function extractProfessors(HTML) {
         }
         professors['timestamp'] = new Date();
     });
+    console.log('Extracting JS object...');
     return professors;
 }
 async function updateDB(professors) {
@@ -75,4 +87,5 @@ async function updateDB(professors) {
     await collection.deleteMany({});
     await collection.insertOne(professors);
     await client.close();
+    console.log('Added document to database');
 }
