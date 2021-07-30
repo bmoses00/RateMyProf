@@ -2,7 +2,12 @@
     "name": "SBU ScheduleBuilder Annotations",
     "version": "0.1",
     "description": "View professors' difficulty and quality ratings on Schedule Builder",
-    "content_scripts": [],
+    "content_scripts": [
+        {
+            "matches": ["https://stonybrook.collegescheduler.com/*"],
+            "js": ["schedulebuilder.js"]
+        }
+    ],
     "background": {
         "scripts": [
             "background.js"

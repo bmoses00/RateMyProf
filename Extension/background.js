@@ -1,8 +1,13 @@
 chrome.runtime.onInstalled.addListener(async () => {
+    console.log('Installed');
     const data = await fetch('https://ratemyprof.brianmoses.tech');
     const profs = await data.json();
     chrome.storage.local.set({ 'professors': profs });
-    // await chrome.storage.local.get(['professors'], res => {
-    //     console.log(res);
-    // });
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+    console.log('Chrome startup');
+    const data = await fetch('https://ratemyprof.brianmoses.tech');
+    const profs = await data.json();
+    chrome.storage.local.set({ 'professors': profs });
 });
