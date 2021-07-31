@@ -5,7 +5,9 @@
     "content_scripts": [
         {
             "matches": ["https://stonybrook.collegescheduler.com/*"],
-            "js": ["schedulebuilder.js"]
+            "js": ["schedulebuilder.js"],
+            "all_frames": true,
+            "run-at": "document_idle"
         }
     ],
     "background": {
