@@ -1,21 +1,22 @@
 // set visibility to false, modify the data, then set visiblity back to true.. unnecessary?
 // make it so everything isn't wrapped inside of a chrome get or a mutation observer
 (async () => {
+    // synchronously get professor data from chrome storage to ensure we have it for observer
     const profs = await new Promise((resolve, reject) =>
         chrome.storage.local.get('professors', ({ professors }) =>
             resolve(professors)
         )
     );
-    new MutationObserver(() => observeMainPage(profs))
+    new MutationObserver(() => addProfessorRatings(profs))
         .observe(document.getElementsByTagName('main')[0], { childList: true });
 })();
 
-function observeMainPage(professors) {
+function addProfessorRatings(professors) {
     /* the reason we use REGEX matching inside the observer instead in manifest.json
         script is that matching subdirectories in manifest.json is unreliable*/
     const url = window.location.href;
     const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses|options)';
-    // const 
+    const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
 
     const tables = document.getElementsByTagName('table');
     // check if URL is correct and that the table has loaded
@@ -37,6 +38,7 @@ function observeMainPage(professors) {
                 const table_el = document.createElement('th');
                 // add the css class that ScheduleBuilder uses
                 table_el.classList.add('css-7aef91-cellCss');
+                // add the professor's rating to the table
                 table_el.innerHTML = `<span>${profData.rating}</span>`;
                 el.firstChild.insertBefore(table_el, profNameNode);
 
@@ -45,7 +47,49 @@ function observeMainPage(professors) {
             }
         });
     }
+
+    /* our first observer will catch when the options page begins loading, but not 
+    when it finishes loading. To avoid the expensive { subtree: true } observer 
+    option, we create another observer which will disconnect when page finishes loading*/
+    else if (url.match(class_options_pattern)) {
+        new MutationObserver((mutations, observer) => {
+            observer.disconnect();
+            addProfessorRatingsOptions(professors);
+        }).observe(document.getElementsByTagName('main')[0].firstChild, { childList: true });
+    }
 }
+
+function addProfessorRatingsOptions(professors) {
+    const tables = document.getElementsByTagName('table');
+
+    // table 0 contains the professor names we want
+    [...tables[0].children].map(el => {
+        const profNameNode = el.firstChild.childNodes.item(5);
+        console.log(profNameNode);
+        // table header row
+        if (el.tagName === 'THEAD') {
+            const table_el = document.createElement('th');
+            // add the css class that ScheduleBuilder uses
+            table_el.classList.add('css-0');
+            table_el.innerText = 'Rating';
+            el.firstChild.insertBefore(table_el, profNameNode);
+        }
+        // table body rows
+        else {
+            const profData = professors[profNameNode.innerText];
+            const table_el = document.createElement('th');
+            // add the css class that ScheduleBuilder uses
+            table_el.classList.add('css-7aef91-cellCss');
+            // add the professor's rating to the table
+            table_el.innerHTML = `<span>${profData.rating}</span>`;
+            el.firstChild.insertBefore(table_el, profNameNode);
+
+            // there is a popup whose colSpan must be increased to make it not look weird
+            el.childNodes.item(2).firstChild.colSpan = 12;
+        }
+    });
+}
+
 
 
 
@@ -123,19 +167,21 @@ function observeMainPage(professors) {
 
 
 
+function logDomObject(element) {
+    console.log(JSON.parse(JSON.stringify(stringify(element), null, '')));
+}
 
+function stringify(element) {
+    let obj = {};
+    obj.name = element.localName;
+    obj.attributes = [];
+    obj.children = [];
+    Array.from(element.attributes).forEach(a => {
+        obj.attributes.push({ name: a.name, value: a.value });
+    });
+    Array.from(element.children).forEach(c => {
+        obj.children.push(stringify(c));
+    });
 
-// function stringify(element) {
-//     let obj = {};
-//     obj.name = element.localName;
-//     obj.attributes = [];
-//     obj.children = [];
-//     Array.from(element.attributes).forEach(a => {
-//         obj.attributes.push({ name: a.name, value: a.value });
-//     });
-//     Array.from(element.children).forEach(c => {
-//         obj.children.push(stringify(c));
-//     });
-
-//     return obj;
-// }
+    return obj;
+}
