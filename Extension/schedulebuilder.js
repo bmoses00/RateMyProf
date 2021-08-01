@@ -1,5 +1,3 @@
-// set visibility to false, modify the data, then set visiblity back to true.. unnecessary?
-// make it so everything isn't wrapped inside of a chrome get or a mutation observer
 (async () => {
     // synchronously get professor data from chrome storage to ensure we have it for observer
     const profs = await new Promise((resolve, reject) =>
@@ -7,65 +5,41 @@
             resolve(professors)
         )
     );
+    // observe changes so that we modify the table once it appears
     new MutationObserver(() => addProfessorRatings(profs))
         .observe(document.getElementsByTagName('main')[0], { childList: true });
 })();
 
 function addProfessorRatings(professors) {
-    /* the reason we use REGEX matching inside the observer instead in manifest.json
-        script is that matching subdirectories in manifest.json is unreliable*/
+    // the reason we use REGEX matching inside the observer instead in manifest.json
+    //  script is that matching subdirectories in manifest.json is unreliable
     const url = window.location.href;
-    const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses|options)';
+    const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!tatuses)|options)';
     const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
 
     const tables = document.getElementsByTagName('table');
+
     // check if URL is correct and that the table has loaded
     if (url.match(main_page_pattern) && tables.length > 0) {
-        // table 1 contains the professor names we want
-        [...tables[1].children].map(el => {
-            const profNameNode = el.firstChild.childNodes.item(6);
-            // table header row
-            if (el.tagName === 'THEAD') {
-                const table_el = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                table_el.classList.add('css-0');
-                table_el.innerText = 'Rating';
-                el.firstChild.insertBefore(table_el, profNameNode);
-            }
-            // table body rows
-            else {
-                const profData = professors[profNameNode.innerText];
-                const table_el = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                table_el.classList.add('css-7aef91-cellCss');
-                // add the professor's rating to the table
-                table_el.innerHTML = `<span>${profData.rating}</span>`;
-                el.firstChild.insertBefore(table_el, profNameNode);
-
-                // there is a popup whose colSpan must be increased to make it not look weird
-                el.childNodes.item(2).firstChild.colSpan = 12;
-            }
-        });
+        modifyTable(professors, tables, true);
     }
-
-    /* our first observer will catch when the options page begins loading, but not 
-    when it finishes loading. To avoid the expensive { subtree: true } observer 
-    option, we create another observer which will disconnect when page finishes loading*/
+    // our first observer will catch when the options page begins loading, but not 
+    // when it finishes loading. To avoid the expensive { subtree: true } observer option,
+    // we create another observer which will disconnect when page finishes loading 
     else if (url.match(class_options_pattern)) {
         new MutationObserver((mutations, observer) => {
             observer.disconnect();
-            addProfessorRatingsOptions(professors);
+            modifyTable(professors, tables, false);
         }).observe(document.getElementsByTagName('main')[0].firstChild, { childList: true });
     }
 }
 
-function addProfessorRatingsOptions(professors) {
-    const tables = document.getElementsByTagName('table');
-
-    // table 0 contains the professor names we want
-    [...tables[0].children].map(el => {
-        const profNameNode = el.firstChild.childNodes.item(5);
-        console.log(profNameNode);
+function modifyTable(professors, tables, isMainPage) {
+    // on the main page the desired table is index 1, on the options page it is index 0
+    const table = isMainPage ? 1 : 0;
+    const profNameIndex = isMainPage ? 6 : 5;
+    [...tables[table].children].map(el => {
+        const profNameNode = el.firstChild.childNodes.item(profNameIndex);
         // table header row
         if (el.tagName === 'THEAD') {
             const table_el = document.createElement('th');
@@ -90,87 +64,11 @@ function addProfessorRatingsOptions(professors) {
     });
 }
 
-
-
-
-
-
-// chrome.storage.local.get('professors', ({ professors }) => {
-//     new MutationObserver((mutations, observer) => {
-//         // console.log(document.getElementsByTagName(/*'main'*/'html')[0]);
-//         // console.log(JSON.stringify(document.getElementsByTagName(/*'main'*/'html')[0]));
-//         console.log(JSON.parse(JSON.stringify(stringify(document.getElementsByTagName('main')[0], null, ' '))));
-//         console.log(document.getElementsByTagName('table')[0]);
-//         // console.log(JSON.parse(JSON.stringify(document.getElementsByTagName(/*'main'*/'html')[0])));
-        
-        
-        
-//         const url = window.location.href;
-//         const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses|options)';
-//         const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
-
-//         const tables = document.getElementsByTagName('table');
-//         // we still need to check for the existence of tables
-//         if (url.match(main_page_pattern) && tables.length > 0) {
-
-//             // the second table is the correct table for the main page
-//             const table = tables[1];
-//             [...table.children].map(async (el) => {
-//                 // the sixth element displays the professor's name
-//                 const profNameNode = el.firstChild.childNodes.item(6);
-
-//                 // header row
-//                 if (el.tagName === "THEAD") {
-//                     const table_el = document.createElement('th');
-//                     // add the css class that ScheduleBuilder uses
-//                     table_el.classList.add('css-0');
-//                     table_el.innerText = 'Rating';
-//                     el.firstChild.insertBefore(table_el, profNameNode);
-//                 }
-//                 // body rows
-//                 else {
-//                     el.childNodes.item(2).firstChild.colSpan = 12;
-
-//                     const profName = profNameNode.innerText;
-//                     const profData = professors[profName];
-//                     const table_el = document.createElement('th');
-//                     table_el.classList.add('css-7aef91-cellCss');
-//                     table_el.innerHTML = `<span>${profData.rating}</span>`;
-
-//                     el.firstChild.insertBefore(table_el, profNameNode);
-//                 }
-
-//             });
-//         }
-//         else if (url.match(class_options_pattern) && tables.length > 0) {
-//             // the first table is the correct table for the main page
-//             const table = tables[0];
-//             [...table.children].map(async (el) => {
-//                 // the sixth element displays the professor's name
-//                 const profNameNode = el.firstChild.childNodes.item(6);
-//                 console.log(profNameNode);
-//                 // header row
-//                 if (el.tagName === "THEAD") {
-
-//                 }
-//                 // body rows
-//                 else {
-
-//                 }
-//             });
-//         }
-        
-//         // REMOVE SUBTREE MONITORING
-//     }).observe(document.getElementsByTagName('html')[0], { childList: true, subtree: true });
-// });
-
-
-
-
+// converts DOM object -> JS object -> String -> JS object then logs it to ensure 
+// console output doesn't change. Code not original.
 function logDomObject(element) {
     console.log(JSON.parse(JSON.stringify(stringify(element), null, '')));
 }
-
 function stringify(element) {
     let obj = {};
     obj.name = element.localName;
