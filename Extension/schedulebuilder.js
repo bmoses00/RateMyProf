@@ -40,7 +40,10 @@ function modifyTableOptionsPage(professors, tables) {
 
     // observe the table for changes. Since the table is destroyed and recreated, we must 
     // attach this observer to the table every time it is recreated
-    const tableObserver = new MutationObserver(() => modifyTable(professors, tables));
+    const tableObserver = new MutationObserver(() => {
+        console.log('table changed');
+        modifyTable(professors, tables, false, !!document.getElementById('enabled_panel'));
+    });
 
 
     const onPageChange = () => {
@@ -93,7 +96,9 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
                     rating: "No data",
                     would_take_again: "No data"
                 }
-                const profData = professors[profNameNode.innerText] ?? noData;
+                let profData = professors[profNameNode.innerText];
+                console.log(profData);
+                if (profData === undefined || profData.num_ratings === "0") profData = noData;
                 const table_col = document.createElement('th');
                 // add the css class that ScheduleBuilder uses
                 table_col.classList.add('css-7aef91-cellCss');
