@@ -48,9 +48,6 @@ function modifyTableOptionsPage(professors, tables) {
 
     const onPageChange = () => {
         tableObserver.observe(tables[0], observerConfig);
-        // if the correct table is being displayed and we haven't already added columns to it
-        // console.log(tables[0].firstChild.firstChild.children.length);
-        // if (document.getElementById('enabled_panel') && tables[0].firstChild.firstChild.children.length === DEFAULT_TABLE_WIDTH)
         modifyTable(professors, tables, false, !!document.getElementById('enabled_panel'));
     }
     const pageChangeObserver = new MutationObserver(onPageChange);
@@ -97,7 +94,6 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
                     would_take_again: "No data"
                 }
                 let profData = professors[profNameNode.innerText];
-                console.log(profData);
                 if (profData === undefined || profData.num_ratings === "0") profData = noData;
                 const table_col = document.createElement('th');
                 // add the css class that ScheduleBuilder uses
@@ -108,6 +104,9 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
 
                 // there is a popup whose colSpan must be increased to make it not look weird
                 row.children[2].firstChild.colSpan = 12;
+                // on this specific table, increase the colSpan of this element
+                if (!isMainPage && !isEnabledPanel) 
+                    row.lastChild.firstChild.colSpan = 12;
             }
         }
     });
