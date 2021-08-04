@@ -1,4 +1,5 @@
 const main = document.getElementsByTagName('main')[0];
+const observerConfig = { childList: true };
 (async () => {
     // synchronously get professor data from chrome storage to ensure we have it for observer
     const profs = await new Promise((resolve, reject) =>
@@ -7,8 +8,8 @@ const main = document.getElementsByTagName('main')[0];
         )
     );
     // observe changes so that we modify the table once it appears
-    new MutationObserver(() => checkUrl(profs))
-        .observe(main, { childList: true });
+    const observer = new MutationObserver(() => checkUrl(profs));
+    observer.observe(main, observerConfig);
 })();
 
 function checkUrl(professors) {
@@ -32,42 +33,77 @@ function modifyTableMainPage(professors, tables) {
     modifyTable(professors, tables, true);
 }
 function modifyTableOptionsPage(professors, tables) {
-    new MutationObserver((mutations, observer) => {
+    // once we've clicked on the page, we need to wait for it to load before modifying its table.
+    // for that, we need another mutation observer. Within that observer we need another to observe
+    // one element which can trigger table reconstruction, and another that opens yet another 
+    // tab which can trigger table reconstruction
+
+    // observe the table for changes. Since the table is destroyed and recreated, we must 
+    // attach this observer to the table every time it is recreated
+    const tableObserver = new MutationObserver(() => modifyTable(professors, tables));
+
+
+    const onPageChange = () => {
+        tableObserver.observe(tables[0], observerConfig);
+        // if the correct table is being displayed and we haven't already added columns to it
+        // console.log(tables[0].firstChild.firstChild.children.length);
+        // if (document.getElementById('enabled_panel') && tables[0].firstChild.firstChild.children.length === DEFAULT_TABLE_WIDTH)
+        modifyTable(professors, tables, false, !!document.getElementById('enabled_panel'));
+    }
+    const pageChangeObserver = new MutationObserver(onPageChange);
+
+
+    const onPageLoad = (mutations, observer) => {
         observer.disconnect();
-        new MutationObserver((mutations, observer) => {
-            if (document.getElementById('enabled_panel'))
-                modifyTable(professors, tables, false);
-        }).observe(main.firstChild.childNodes.item(2), { childList: true });
-        modifyTable(professors, tables, false);
-    }).observe(main.firstChild, { childList: true });
+        pageChangeObserver.observe(main.firstChild.children[2], observerConfig);
+        modifyTable(professors, tables, false, true);
+    }
+    const pageLoadObserver = new MutationObserver((mutations, observer) => onPageLoad(mutations, observer));
+    pageLoadObserver.observe(main.firstChild, observerConfig);
 }
 
-function modifyTable(professors, tables, isMainPage) {
-    // on the main page the desired table is index 1, on the options page it is index 0
+function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = false) {
+    // there are different values for table number, index of professor name in table, table with for
+    // the different tables on the site
     const table = isMainPage ? 1 : 0;
-    const profNameIndex = isMainPage ? 6 : 5;
-    [...tables[table].children].map(el => {
-        const profNameNode = el.firstChild.childNodes.item(profNameIndex);
-        // table header row
-        if (el.tagName === 'THEAD') {
-            const table_el = document.createElement('th');
-            // add the css class that ScheduleBuilder uses
-            table_el.classList.add('css-0');
-            table_el.innerText = 'Rating';
-            el.firstChild.insertBefore(table_el, profNameNode.nextSibling);
-        }
-        // table body rows
-        else {
-            const profData = professors[profNameNode.innerText];
-            const table_el = document.createElement('th');
-            // add the css class that ScheduleBuilder uses
-            table_el.classList.add('css-7aef91-cellCss');
-            // add the professor's rating to the table
-            table_el.innerHTML = `<span>${profData.rating}</span>`;
-            el.firstChild.insertBefore(table_el, profNameNode.nextSibling);
+    let profNameIndex = isMainPage ? 6 : 5;
+    if (!isMainPage && !isEnabledPanel) profNameIndex--;
+    const default_table_width = isEnabledPanel ? 10 : 9;
 
-            // there is a popup whose colSpan must be increased to make it not look weird
-            el.childNodes.item(2).firstChild.colSpan = 12;
+    [...tables[table].children].map(row => {
+        // if this row hasn't been modified before. We check per row because some rows 
+        // may be modified and others not
+        if (row.firstChild.children.length === default_table_width) {
+            const profNameNode = row.firstChild.children[profNameIndex];;
+            
+            // table header row
+            if (row.tagName === 'THEAD') {
+                const table_col = document.createElement('th');
+                // add the css class that ScheduleBuilder uses
+                table_col.classList.add('css-0');
+                table_col.innerText = 'Rating';
+                row.firstChild.insertBefore(table_col, profNameNode.nextSibling);
+            }
+            // table body rows
+            else {
+                const noData = {
+                    difficulty: "No data",
+                    href: "No data",
+                    num_ratings: "No data",
+                    rating: "No data",
+                    would_take_again: "No data"
+                }
+                const profData = professors[profNameNode.innerText] ?? noData;
+                const table_col = document.createElement('th');
+                // add the css class that ScheduleBuilder uses
+                table_col.classList.add('css-7aef91-cellCss');
+                // add the professor's rating to the table
+                table_col.innerHTML = `<span>${profData.rating}</span>`;
+                row.firstChild.insertBefore(table_col, profNameNode.nextSibling);
+
+                // there is a popup whose colSpan must be increased to make it not look weird
+                row.children[2].firstChild.colSpan = 12;
+            }
         }
     });
 }
