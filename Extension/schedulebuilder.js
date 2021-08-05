@@ -13,9 +13,10 @@ const observerConfig = { childList: true };
 })();
 
 function checkUrl(professors) {
+    console.log('url logged');
     //  use REGEX matching inside the observer because matching subdirectories in manifest.json is unreliable
     const url = window.location.href;
-    const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!tatuses)|options)';
+    const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!tatuses)|options|schedules(?!.+)|breaks)';
     const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
 
     const tables = document.getElementsByTagName('table');
@@ -63,14 +64,13 @@ function modifyTableOptionsPage(professors, tables) {
 }
 
 function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = false) {
-    // there are different values for table number, index of professor name in table, table with for
-    // the different tables on the site
-    const table = isMainPage ? 1 : 0;
+    // there are different values for index of professor name in table and table width
+    // for the different tables on the site
     let profNameIndex = isMainPage ? 6 : 5;
     if (!isMainPage && !isEnabledPanel) profNameIndex--;
     const default_table_width = isEnabledPanel ? 10 : 9;
 
-    [...tables[table].children].map(row => {
+    [...tables[tables.length - 1].children].map(row => {
         // if this row hasn't been modified before. We check per row because some rows 
         // may be modified and others not
         if (row.firstChild.children.length === default_table_width) {
