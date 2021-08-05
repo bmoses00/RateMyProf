@@ -13,7 +13,6 @@ const observerConfig = { childList: true };
 })();
 
 function checkUrl(professors) {
-    console.log('url logged');
     //  use REGEX matching inside the observer because matching subdirectories in manifest.json is unreliable
     const url = window.location.href;
     const main_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!tatuses)|options|schedules(?!.+)|breaks)';
@@ -22,18 +21,16 @@ function checkUrl(professors) {
     const tables = document.getElementsByTagName('table');
 
     // check if URL matches the main page and that the table has loaded
-    if (url.match(main_page_pattern) && tables.length > 0) {
-        modifyTableMainPage(professors, tables);
-    }
-    else if (url.match(class_options_pattern)) {
-        modifyTableOptionsPage(professors, tables);
-    }
+    if (url.match(main_page_pattern) && tables.length > 0) 
+        handleMainPageChanges(professors, tables);
+    else if (url.match(class_options_pattern)) 
+        handleOptionsPageChanges(professors, tables);
 }
 
-function modifyTableMainPage(professors, tables) {
+function handleMainPageChanges(professors, tables) {
     modifyTable(professors, tables, true);
 }
-function modifyTableOptionsPage(professors, tables) {
+function handleOptionsPageChanges(professors, tables) {
     // once we've clicked on the page, we need to wait for it to load before modifying its table.
     // for that, we need another mutation observer. Within that observer we need another to observe
     // one element which can trigger table reconstruction, and another that opens yet another 
@@ -41,10 +38,7 @@ function modifyTableOptionsPage(professors, tables) {
 
     // observe the table for changes. Since the table is destroyed and recreated, we must 
     // attach this observer to the table every time it is recreated
-    const tableObserver = new MutationObserver(() => {
-        console.log('table changed');
-        modifyTable(professors, tables, false, !!document.getElementById('enabled_panel'));
-    });
+    const tableObserver = new MutationObserver(() => modifyTable(professors, tables, false, !!document.getElementById('enabled_panel')));
 
 
     const onPageChange = () => {
@@ -66,8 +60,7 @@ function modifyTableOptionsPage(professors, tables) {
 function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = false) {
     // there are different values for index of professor name in table and table width
     // for the different tables on the site
-    let profNameIndex = isMainPage ? 6 : 5;
-    if (!isMainPage && !isEnabledPanel) profNameIndex--;
+    const profNameIndex = isMainPage ? 6 : isEnabledPanel ? 5 : 4;
     const default_table_width = isEnabledPanel ? 10 : 9;
 
     [...tables[tables.length - 1].children].map(row => {
