@@ -18,7 +18,7 @@ const observerConfig = { childList: true };
 function checkUrl(professors) {
     //  use REGEX matching inside the observer because matching subdirectories in manifest.json is unreliable
     const url = window.location.href;
-    const landing_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!tatuses)|options|schedules(?!.+)|breaks)';
+    const landing_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!.+)|options|schedules(?!.+)|breaks)';
     const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
     const schedule_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/schedules\/.+';
 
@@ -50,6 +50,7 @@ function handleOptionsPageChanges(professors, tables) {
     // for page load), activate the observer for changes in the page, and call modifyTable()
     const onPageLoad = (mutations, observer) => {
         observer.disconnect();
+        tableObserver.observe(tables[0], observerConfig);
         pageChangeObserver.observe(main.firstChild.children[2], observerConfig);
         modifyTable(professors, tables, false, true);
     }
@@ -90,7 +91,6 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
     // for the different tables on the site
     const profNameIndex = isMainPage ? 6 : isEnabledPanel ? 5 : 4;
     const default_table_width = isEnabledPanel ? 10 : 9;
-
     [...tables[tables.length - 1].children].map(row => {
         // only add to the row if it hasn't been modified from its default width
         if (row.firstChild.children.length === default_table_width) {
