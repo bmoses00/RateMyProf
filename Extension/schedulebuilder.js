@@ -3,7 +3,6 @@ const observerConfig = { childList: true };
 
 
 (async () => {
-    // synchronously get professor data from chrome storage to ensure we have it for observer
     const profs = await new Promise((resolve, reject) =>
         chrome.storage.local.get('professors', ({ professors }) =>
             resolve(professors)
@@ -13,6 +12,8 @@ const observerConfig = { childList: true };
     const observer = new MutationObserver(() => checkUrl(profs));
     observer.observe(main, observerConfig);
 })();
+
+
 
 
 function checkUrl(professors) {
@@ -28,6 +29,8 @@ function checkUrl(professors) {
     url.match(class_options_pattern) ? handleOptionsPageChanges(professors, tables)  :
     url.match(schedule_page_pattern) ? handleSchedulePageChanges(professors, tables) : ''
 }
+
+
 
 
 function handleLandingPageChanges(professors, tables) {
@@ -62,27 +65,28 @@ function handleSchedulePageChanges(professors, tables) {
     // div with the information on SBU classes
     const days = document.getElementsByClassName('css-54eexc-daysCss')[0].children;
     // uses the 'days' div to get which class each professor is teaching
-    const getProfsClasses = () => {
-        const profsClasses = {};
-        // we need to loop through all grandchildren of the 'days' element
-        [...days].map(day => {
-            [...day.children].map(SBUclass => {
-                // we use this information to figure out which class which professor is teaching
-                const classInfo = [...SBUclass.firstChild.lastChild.children].slice(-2)[0].innerText.split('\n');
-                profsClasses[classInfo[0]] = classInfo[2];
-            });
-        });
-        return profsClasses;
-    }
-    // given the special behavior of the table in the 'schedule' page, we have a special modifyTable() function
+
     modifyTableScheduleTab(professors, tables, getProfsClasses());
     // whenever the schedule changes, modify the new table
-    const scheduleObserver = new MutationObserver(() => modifyTableScheduleTab(professors, tables, getProfsClasses()));
+    const profsClasses = getProfsClasses();
+    const scheduleObserver = new MutationObserver(() => modifyTableScheduleTab(professors, tables, profsClasses));
 
     // add event listeners to detect when the schedule changes
     [...days].map(day => {
         scheduleObserver.observe(day, observerConfig);
     });
+}
+function getProfsClasses() {
+    const profsClasses = {};
+    // we need to loop through all grandchildren of the 'days' element
+    [...days].map(day => {
+        [...day.children].map(SBUclass => {
+            // we use this information to figure out which class which professor is teaching
+            const classInfo = [...SBUclass.firstChild.lastChild.children].slice(-2)[0].innerText.split('\n');
+            profsClasses[classInfo[0]] = classInfo[2];
+        });
+    });
+    return profsClasses;
 }
 
 
@@ -98,95 +102,106 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
             
             // table header row
             if (row.tagName === 'THEAD') {
-                const table_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                table_col.classList.add('css-0');
-                table_col.innerText = 'Rating';
-                row.firstChild.insertBefore(table_col, profNameNode.nextSibling);
+                const rating_col = getRatingsHeader();
+                row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
             }
             // table body rows
             else {
-                const noData = {
-                    difficulty: "No data",
-                    href: "No data",
-                    num_ratings: "No data",
-                    rating: "No data",
-                    would_take_again: "No data"
-                }
-                let profData = professors[profNameNode.innerText];
-                if (profData === undefined || profData.num_ratings === "0") profData = noData;
-                const table_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                table_col.classList.add('css-7aef91-cellCss');
-                // add the professor's rating to the table
-                table_col.innerHTML = `<span>${profData.rating}</span>`;
-                row.firstChild.insertBefore(table_col, profNameNode.nextSibling);
+                const profName = profNameNode.innerText;
+                const rating_col = getRatingsBody(profName, professors);
+                row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
 
-                // there is a popup whose colSpan must be increased to make it not look weird
-                row.children[2].firstChild.colSpan = 12;
+                // there are two popups whose colSpan must be increased by the number of columns we added (1) to make it not look weird
+                row.children[2].firstChild.colSpan++;
                 // on this specific table, increase the colSpan of this element
                 if (!isMainPage && !isEnabledPanel) 
-                    row.lastChild.firstChild.colSpan = 12;
+                    row.lastChild.firstChild.colSpan++;
             }
         }
     });
 }
 
+// use a separate function because here we add two divs at once, more efficint to use document fragment
 function modifyTableScheduleTab(professors, tables, profsClasses) {
     const default_table_width = 13;
     [...tables[tables.length - 1].children].map(row => {
         if (row.firstChild.children.length === default_table_width) {
-            if (row.tagName === 'THEAD') {
-                const rating_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                rating_col.classList.add('css-0');
-                rating_col.innerText = 'Rating';
-                row.firstChild.insertBefore(rating_col, row.firstChild.children[8]);
+            const fragment = new DocumentFragment();
 
-                const professor_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                professor_col.classList.add('css-0');
-                professor_col.innerText = 'Professor';
-                row.firstChild.insertBefore(professor_col, row.firstChild.children[8]);
+            if (row.tagName === 'THEAD') {
+                const rating_col = getRatingsHeader();
+                const professor_col = getProfessorsHeader();
+
+                fragment.appendChild(professor_col);
+                fragment.appendChild(rating_col);
+                row.firstChild.insertBefore(fragment, row.firstChild.children[8]);
             }
             else if (row.tagName === 'TBODY') {
                 const className = row.firstChild.children[6].innerText + '-' + row.firstChild.children[7].innerText;
                 const profName = profsClasses[className];
+                const rating_col = getRatingsBody(profName, professors);
+                const professor_col = getProfessorsBody(profName);
 
-                const noData = {
-                    difficulty: "No data",
-                    href: "No data",
-                    num_ratings: "No data",
-                    rating: "No data",
-                    would_take_again: "No data"
-                }
-                let profData = professors[profName];
-                if (profData === undefined || profData.num_ratings === "0") profData = noData;
+                fragment.appendChild(professor_col);
+                fragment.appendChild(rating_col);
+                row.firstChild.insertBefore(fragment, row.firstChild.children[8]);
 
-                const rating_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                rating_col.classList.add('css-7aef91-cellCss');
-                // add the professor's rating to the table
-                rating_col.innerHTML = `<span>${profData.rating}</span>`;
-                row.firstChild.insertBefore(rating_col, row.firstChild.children[8]);
-
-                const professor_col = document.createElement('th');
-                // add the css class that ScheduleBuilder uses
-                professor_col.classList.add('css-7aef91-cellCss');
-                // add the professor's rating to the table
-                professor_col.innerHTML = `<span>${profName}</span>`;
-                row.firstChild.insertBefore(professor_col, row.firstChild.children[8]);
-
-                // there is a popup whose colSpan must be increased to make it not look weird
-                row.children[2].firstChild.colSpan = 15;
+                // there is a popup whose colSpan must be increased by the number of columns we added (2) to make it not look weird
+                row.children[2].firstChild.colSpan += 2;
             }
             else {
-                row.firstChild.firstChild.colSpan = 14;
+                row.firstChild.firstChild.colSpan += 2;
             }
         }
     });
 }
 
+
+
+
+function getRatingsHeader() {
+    const rating_col = document.createElement('th');
+    // add the css class that ScheduleBuilder uses
+    rating_col.classList.add('css-0');
+    rating_col.innerText = 'Ratings';
+    return rating_col;
+}
+
+function getProfessorsHeader() {
+    const professor_col = document.createElement('th');
+    // add the css class that ScheduleBuilder uses
+    professor_col.classList.add('css-0');
+    professor_col.innerText = 'Professor';
+    return professor_col;
+}
+
+function getRatingsBody(profName, professors) {
+    const noData = {
+        difficulty: "No data",
+        href: "No data",
+        num_ratings: "No data",
+        rating: "No data",
+        would_take_again: "No data"
+    }
+    let profData = professors[profName];
+    if (profData === undefined || profData.num_ratings === "0") profData = noData;
+
+    const rating_col = document.createElement('th');
+    // add the css class that ScheduleBuilder uses
+    rating_col.classList.add('css-7aef91-cellCss');
+    // add the professor's rating to the table
+    rating_col.innerHTML = `<span>Rating: ${profData.rating} | Difficulty: ${profData.difficulty} | Would retake: ${profData.would_take_again}</span>`;
+    return rating_col;
+}
+
+function getProfessorsBody(profName) {
+    const professor_col = document.createElement('th');
+    // add the css class that ScheduleBuilder uses
+    professor_col.classList.add('css-7aef91-cellCss');
+    // add the professor's rating to the table
+    professor_col.innerHTML = `<span>${profName}</span>`;
+    return professor_col;
+}
 
 // converts DOM object -> JS object -> String -> JS object then logs it to ensure 
 // console output doesn't change. Code not original.
