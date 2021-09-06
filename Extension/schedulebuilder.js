@@ -78,6 +78,7 @@ function handleSchedulePageChanges(professors, tables) {
 }
 function getProfsClasses() {
     const profsClasses = {};
+    const days = document.getElementsByClassName('css-54eexc-daysCss')[0].children;
     // we need to loop through all grandchildren of the 'days' element
     [...days].map(day => {
         [...day.children].map(SBUclass => {

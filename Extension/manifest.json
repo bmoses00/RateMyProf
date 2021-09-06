@@ -8,6 +8,12 @@
             "js": ["schedulebuilder.js"],
             "all_frames": true,
             "run-at": "document_idle"
+        },
+        {
+            "matches": ["https://psns.cc.stonybrook.edu/psp/csprods/EMPLOYEE/CAMP/*"],
+            "js": ["solar.js"],
+            "all_frames": true,
+            "run-at": "document_idle"
         }
     ],
     "background": {
