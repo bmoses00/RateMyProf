@@ -1,6 +1,13 @@
+// TODO: replace the .map() function
+
 const main = document.getElementsByTagName('main')[0];
 const observerConfig = { childList: true };
 
+
+// chrome.storage.local.get('professors', ({ professors }) => {
+//     const observer = new MutationObserver(() => checkUrl(professors));
+//     observer.observe(main, observerConfig);
+// })
 
 (async () => {
     const profs = await new Promise((resolve, reject) =>
@@ -19,7 +26,7 @@ const observerConfig = { childList: true };
 function checkUrl(professors) {
     //  use REGEX matching inside the observer because matching subdirectories in manifest.json is unreliable
     const url = window.location.href;
-    const landing_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!.+)|options|schedules(?!.+)|breaks)';
+    const landing_page_pattern  = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!.+)|options|schedules(?!.+)|breaks)';
     const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
     const schedule_page_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/schedules\/.+';
 
@@ -94,14 +101,14 @@ function getProfsClasses() {
 function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = false) {
     // there are different values for index of professor name and for table width
     // for the different tables on the site
+    const profUrlBeginning = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=";
     const profNameIndex = isMainPage ? 6 : isEnabledPanel ? 5 : 4;
     const default_table_width = isEnabledPanel ? 10 : 9;
     [...tables[tables.length - 1].children].map(row => {
         // only add to the row if it hasn't been modified from its default width
         if (row.firstChild.children.length === default_table_width) {
-            const profNameNode = row.firstChild.children[profNameIndex];;
-            
-            // table header row
+            const profNameNode = row.firstChild.children[profNameIndex];
+
             if (row.tagName === 'THEAD') {
                 const rating_col = getRatingsHeader();
                 row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
@@ -109,6 +116,8 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
             // table body rows
             else {
                 const profName = profNameNode.innerText;
+                if (professors[profName] != undefined)
+                    profNameNode.innerHTML = `<a href = "${profUrlBeginning}${professors[profName].href}" target = _"blank"> ${profName} </a>`
                 const rating_col = getRatingsBody(profName, professors);
                 row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
 
@@ -187,16 +196,21 @@ function getRatingsBody(profName, professors) {
     let profData = professors[profName];
     if (profData === undefined || profData.num_ratings === "0") profData = noData;
 
-    const rating_col = document.createElement('th');
+    const rating_col = document.createElement('td');
     // add the css class that ScheduleBuilder uses
     rating_col.classList.add('css-7aef91-cellCss');
     // add the professor's rating to the table
-    rating_col.innerHTML = `<span>Rating: ${profData.rating} | Difficulty: ${profData.difficulty} | Would retake: ${profData.would_take_again}</span>`;
+    rating_col.innerHTML = `<table><tbody><tr> <td>Rating: ${profData.rating} </td> 
+                                               <td>Difficulty: ${profData.difficulty} </td> 
+                                               <td>Would Retake: ${profData.would_take_again} </td> 
+                            </tr></tbody></table>`;
+    // rating_col.innerHTML = `<table><tbody><tr>Rating: ${profData.rating} </tr> <tr> Difficulty: ${profData.difficulty} </tr> <tr> Would retake: ${profData.would_take_again} </tr> </tbody> </table>`;
+    // rating_col.innerHTML = `<table><tbody><tr>Hi</tr></tbody></table>`;
     return rating_col;
 }
 
 function getProfessorsBody(profName) {
-    const professor_col = document.createElement('th');
+    const professor_col = document.createElement('td');
     // add the css class that ScheduleBuilder uses
     professor_col.classList.add('css-7aef91-cellCss');
     // add the professor's rating to the table
