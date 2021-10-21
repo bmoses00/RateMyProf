@@ -1,4 +1,7 @@
 // TODO: replace the .map() function
+const RATING = 0;
+const DIFFICULTY = 1;
+const WOULD_RETAKE = 2;
 
 const main = document.getElementsByTagName('main')[0];
 const observerConfig = { childList: true };
@@ -186,6 +189,7 @@ function getProfessorsHeader() {
 }
 
 function getRatingsBody(profName, professors) {
+
     const noData = {
         difficulty: "No data",
         href: "No data",
@@ -200,12 +204,13 @@ function getRatingsBody(profName, professors) {
     // add the css class that ScheduleBuilder uses
     rating_col.classList.add('css-7aef91-cellCss');
     // add the professor's rating to the table
-    rating_col.innerHTML = `<table><tbody><tr> <td>Rating: ${profData.rating} </td> 
-                                               <td>Difficulty: ${profData.difficulty} </td> 
-                                               <td>Would Retake: ${profData.would_take_again} </td> 
+    const rating_color = getColor(RATING, profData.rating);
+    const difficulty_color = getColor(DIFFICULTY, profData.difficulty);
+    const would_retake_color = getColor(WOULD_RETAKE, parseFloat(profData.would_take_again) / 100);
+    rating_col.innerHTML = `<table><tbody><tr> <td> Rating:       <b style = 'color: ${rating_color}'>       ${profData.rating}           </b></td>
+                                               <td> Difficulty:   <b style = 'color: ${difficulty_color}'>   ${profData.difficulty}       </b></td>
+                                               <td> Would Retake: <b style = 'color: ${would_retake_color}'> ${profData.would_take_again} </b></td>
                             </tr></tbody></table>`;
-    // rating_col.innerHTML = `<table><tbody><tr>Rating: ${profData.rating} </tr> <tr> Difficulty: ${profData.difficulty} </tr> <tr> Would retake: ${profData.would_take_again} </tr> </tbody> </table>`;
-    // rating_col.innerHTML = `<table><tbody><tr>Hi</tr></tbody></table>`;
     return rating_col;
 }
 
@@ -216,6 +221,28 @@ function getProfessorsBody(profName) {
     // add the professor's rating to the table
     professor_col.innerHTML = `<span>${profName}</span>`;
     return professor_col;
+}
+
+function getColor(type, input) {
+    let percentage = 0.5
+    switch(type) {
+        case RATING:
+            percentage = (input - 1) / 4; 
+            break;
+        case DIFFICULTY:
+            percentage = (5 - input) / 4;
+            break;
+        case WOULD_RETAKE:
+            percentage = input;
+            break;
+        default:
+    }
+    const red = 255 * (1 - percentage);
+    const green = 255 * percentage;
+    // const red = (percentage < 0.5) ? 255 : 2 * 255 * (1 - percentage);
+    // const green = (percentage >= 0.5) ? 255 : percentage * 2;
+    return `rgb(${red}, ${green}, 0)`;
+
 }
 
 // converts DOM object -> JS object -> String -> JS object then logs it to ensure 
