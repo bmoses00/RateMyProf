@@ -1,10 +1,12 @@
 import fetch from 'node-fetch';
+const { MongoClient } = require('mongodb');
 
 (async () => {
     let professors = await getProfessors(true);
     await addDetailedInfo(professors);
     compileInfo(professors);
-    console.log(professors);
+    await updateDB(professors);
+    // console.log(professors);
 })();
 
 // uses RateMyProf's API to get a map of all professors and their id's
@@ -27,7 +29,7 @@ async function getProfessors(testing = false) {
         console.log("Adding page " + page);
         page++;
     } while (moreData && !testing) 
-    console.log("Professor retrieval successful");
+    console.log("Professor IDs retrieved successfully");
     return professors;
 }
 
@@ -53,6 +55,7 @@ async function addDetailedInfo(professors) {
             professors[professor]["ratings"].push(importantRatingData);
         }
     }
+    console.log("Professor data added successfully");
 }
 
 // computes average difficulty and would retake ratings from the individual ratings
@@ -72,4 +75,20 @@ function compileInfo(professors) {
         professors[professor].would_retake = wouldRetake / (wouldRetake + wouldNotRetake);
         professors[professor].num_ratings = num_ratings;
     }
+    console.log("Professor ratings computed successfully");
+}
+
+async function updateDB(professors) {
+    const uri = 'mongodb://localhost:27017';
+    const client = new MongoClient(uri);
+
+    await client.connect();
+
+    const db = client.db('professors');
+    const collection = db.collection('professors');
+
+    await collection.deleteMany({});
+    await collection.insertOne(professors);
+    await client.close();
+    console.log("Database updated successfully");
 }
