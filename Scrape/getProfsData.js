@@ -1,10 +1,11 @@
 import fetch from 'node-fetch';
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
 
 (async () => {
     let professors = await getProfessors(true);
     await addDetailedInfo(professors);
     compileInfo(professors);
+    addTimeStamp(professors);
     await updateDB(professors);
     // console.log(professors);
 })();
@@ -72,10 +73,17 @@ function compileInfo(professors) {
         }
         let num_ratings = professors[professor].ratings.length;
         professors[professor].difficulty = parseFloat((difficultySum / num_ratings).toFixed(1));
-        professors[professor].would_retake = wouldRetake / (wouldRetake + wouldNotRetake);
+        professors[professor].would_take_again = wouldRetake / (wouldRetake + wouldNotRetake);
         professors[professor].num_ratings = num_ratings;
     }
     console.log("Professor ratings computed successfully");
+}
+
+function addTimeStamp(professors) {
+    let professorsWithTimeStamp = {};
+    professorsWithTimeStamp.professors = professors;
+    professorsWithTimeStamp.timestamp = new Date();
+    professors = professorsWithTimeStamp;
 }
 
 async function updateDB(professors) {
