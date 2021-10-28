@@ -1,17 +1,11 @@
 {
-    "name": "SBU ScheduleBuilder Annotations",
-    "version": "0.1",
-    "description": "View professors' difficulty and quality ratings on Schedule Builder",
+    "name": "SBU ScheduleBuilder Enhancements",
+    "version": "0.4",
+    "description": "View professors' difficulty and quality ratings on Schedule Builder\n\n",
     "content_scripts": [
         {
             "matches": ["https://stonybrook.collegescheduler.com/*"],
             "js": ["schedulebuilder.js"],
-            "all_frames": true,
-            "run-at": "document_idle"
-        },
-        {
-            "matches": ["https://psns.cc.stonybrook.edu/psp/csprods/EMPLOYEE/CAMP/*"],
-            "js": ["solar.js"],
             "all_frames": true,
             "run-at": "document_idle"
         }

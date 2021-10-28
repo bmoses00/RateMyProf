@@ -1,3 +1,5 @@
+'use strict';
+
 // TODO: replace the .map() function
 const RATING = 0;
 const DIFFICULTY = 1;
@@ -13,11 +15,18 @@ const observerConfig = { childList: true };
 // })
 
 (async () => {
-    const profs = await new Promise((resolve, reject) =>
+    
+    let profs = await new Promise((resolve, reject) =>
         chrome.storage.local.get('professors', ({ professors }) =>
             resolve(professors)
         )
     );
+    if (profs === undefined) {
+        const data = await fetch('https://ratemyprof.brianmoses.tech');
+        profs = await data.json();
+        console.log(profs);
+        chrome.storage.local.set({ 'professors': profs });
+    }
     // observe changes so that we modify the table once it appears
     const observer = new MutationObserver(() => checkUrl(profs));
     observer.observe(main, observerConfig);
@@ -72,6 +81,8 @@ function handleOptionsPageChanges(professors, tables) {
 }
 
 function handleSchedulePageChanges(professors, tables) {
+    console.log('handling schedule page changes');
+    // console.log(tables == undefined);
     // div with the information on SBU classes
     const days = document.getElementsByClassName('css-54eexc-daysCss')[0].children;
     // uses the 'days' div to get which class each professor is teaching
@@ -107,6 +118,7 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
     const profUrlBeginning = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=";
     const profNameIndex = isMainPage ? 6 : isEnabledPanel ? 5 : 4;
     const default_table_width = isEnabledPanel ? 10 : 9;
+    console.log(tables.length);
     [...tables[tables.length - 1].children].map(row => {
         // only add to the row if it hasn't been modified from its default width
         if (row.firstChild.children.length === default_table_width) {
@@ -119,7 +131,10 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
             // table body rows
             else {
                 const profName = profNameNode.innerText;
-                if (professors[profName] != undefined)
+                if (profName === '') {
+                    profNameNode.innerText = "Name unknown";
+                }
+                if (profName in professors)
                     profNameNode.innerHTML = `<a href = "${profUrlBeginning}${professors[profName].href}" target = _"blank"> ${profName} </a>`
                 const rating_col = getRatingsBody(profName, professors);
                 row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
@@ -136,8 +151,11 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
 
 // use a separate function because here we add two divs at once, more efficint to use document fragment
 function modifyTableScheduleTab(professors, tables, profsClasses) {
-    const default_table_width = 13;
+    const default_table_width = 12;
     [...tables[tables.length - 1].children].map(row => {
+        if (row.tagName === 'TFOOT') {
+            row.firstChild.firstChild.colSpan = 13;
+        }
         if (row.firstChild.children.length === default_table_width) {
             const fragment = new DocumentFragment();
 
@@ -150,8 +168,10 @@ function modifyTableScheduleTab(professors, tables, profsClasses) {
                 row.firstChild.insertBefore(fragment, row.firstChild.children[8]);
             }
             else if (row.tagName === 'TBODY') {
-                const className = row.firstChild.children[6].innerText + '-' + row.firstChild.children[7].innerText;
-                const profName = profsClasses[className];
+                const className = row.firstChild.children[5].innerText + '-' + row.firstChild.children[6].innerText;
+                let profName = profsClasses[className];
+                profName ??= "Name Unknown";
+                
                 const rating_col = getRatingsBody(profName, professors);
                 const professor_col = getProfessorsBody(profName);
 
@@ -161,9 +181,6 @@ function modifyTableScheduleTab(professors, tables, profsClasses) {
 
                 // there is a popup whose colSpan must be increased by the number of columns we added (2) to make it not look weird
                 row.children[2].firstChild.colSpan += 2;
-            }
-            else {
-                row.firstChild.firstChild.colSpan += 2;
             }
         }
     });
@@ -197,8 +214,11 @@ function getRatingsBody(profName, professors) {
         rating: "No data",
         would_take_again: "No data"
     }
-    let profData = professors[profName];
-    if (profData === undefined || profData.num_ratings === "0") profData = noData;
+    let profData = noData;
+    if (profName in professors) {
+        profData = professors[profName];
+    }
+    if (profData.num_ratings === "0") profData = noData;
 
     const rating_col = document.createElement('td');
     // add the css class that ScheduleBuilder uses
@@ -256,6 +276,7 @@ function stringify(element) {
     obj.name = element.localName;
     obj.attributes = [];
     obj.children = [];
+    console.log(element.attributes);
     Array.from(element.attributes).forEach(a => {
         obj.attributes.push({ name: a.name, value: a.value });
     });
