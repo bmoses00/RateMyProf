@@ -4,4 +4,4 @@ A Chrome Extension inteded for use by students at Stony Brook University. The ex
 
 ## Link
 
-View the extension on the (Chrome Web Store)[https://chrome.google.com/webstore/detail/sbu-schedulebuilder-enhan/aimdogcdagfchdddcdkljpmdmiciflkh]
+View the extension on the [Chrome Web Store](https://chrome.google.com/webstore/detail/sbu-schedulebuilder-enhan/aimdogcdagfchdddcdkljpmdmiciflkh)
