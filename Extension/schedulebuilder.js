@@ -5,8 +5,8 @@ const RATING = 0;
 const DIFFICULTY = 1;
 const WOULD_RETAKE = 2;
 
-const main = document.getElementsByTagName('main')[0];
-const observerConfig = { childList: true };
+const main = document.getElementsByTagName('main')[0].firstChild;
+const observerConfig = { childList: true, attributes: true };
 
 
 // chrome.storage.local.get('professors', ({ professors }) => {
@@ -15,12 +15,15 @@ const observerConfig = { childList: true };
 // })
 
 (async () => {
-    
-    let profs = await new Promise((resolve, reject) =>
-        chrome.storage.local.get('professors', ({ professors }) =>
+    console.log('within "main" async');
+
+    let profs = await new Promise((resolve, reject) => {
+        chrome.storage.local.get('professors', ({ professors }) => {
             resolve(professors)
-        )
-    );
+        })
+    });
+
+    console.log('after the profs get', profs);
     if (profs === undefined) {
         const data = await fetch('https://ratemyprof.brianmoses.tech');
         profs = await data.json();
@@ -30,13 +33,21 @@ const observerConfig = { childList: true };
     // observe changes so that we modify the table once it appears
     const observer = new MutationObserver(() => checkUrl(profs));
     observer.observe(main, observerConfig);
+
+    console.log(main, observer);
 })();
 
+// console.log(chrome);
+// chrome.webNavigation.onCompleted.addListener(function(details) {
+//     console.log('URL changed:', details.url);
+// });
 
 
 
 function checkUrl(professors) {
     //  use REGEX matching inside the observer because matching subdirectories in manifest.json is unreliable
+    console.log('checkURL');
+
     const url = window.location.href;
     const landing_page_pattern  = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/(courses(?!.+)|options|schedules(?!.+)|breaks)';
     const class_options_pattern = 'https:\/\/stonybrook.collegescheduler.com\/terms\/.*\/courses\/.*';
@@ -84,7 +95,7 @@ function handleSchedulePageChanges(professors, tables) {
     console.log('handling schedule page changes');
     // console.log(tables == undefined);
     // div with the information on SBU classes
-    const days = document.getElementsByClassName('css-54eexc-daysCss')[0].children;
+    const days = document.getElementsByClassName('css-qqem7k-daysCss')[0].children;
     // uses the 'days' div to get which class each professor is teaching
 
     modifyTableScheduleTab(professors, tables, getProfsClasses());
@@ -99,7 +110,7 @@ function handleSchedulePageChanges(professors, tables) {
 }
 function getProfsClasses() {
     const profsClasses = {};
-    const days = document.getElementsByClassName('css-54eexc-daysCss')[0].children;
+    const days = document.getElementsByClassName('css-qqem7k-daysCss')[0].children;
     // we need to loop through all grandchildren of the 'days' element
     [...days].map(day => {
         [...day.children].map(SBUclass => {
@@ -134,8 +145,9 @@ function modifyTable(professors, tables, isMainPage = false, isEnabledPanel = fa
                 if (profName === '') {
                     profNameNode.innerText = "Name unknown";
                 }
+                console.log(professors[profName]);
                 if (profName in professors)
-                    profNameNode.innerHTML = `<a href = "${profUrlBeginning}${professors[profName].href}" target = _"blank"> ${profName} </a>`
+                    profNameNode.innerHTML = `<a href = "${profUrlBeginning}${professors[profName].id}" target = _"blank"> ${profName} </a>`
                 const rating_col = getRatingsBody(profName, professors);
                 row.firstChild.insertBefore(rating_col, profNameNode.nextSibling);
 

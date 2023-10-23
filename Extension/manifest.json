@@ -11,13 +11,11 @@
         }
     ],
     "background": {
-        "scripts": [
-            "background.js"
-        ],
-        "persistent": false
+        "service_worker": "background.js"
     },
     "permissions": [
-        "storage"
+        "storage",
+        "webNavigation"
     ],
-    "manifest_version": 2
+    "manifest_version": 3
 }
